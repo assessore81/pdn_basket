@@ -439,6 +439,7 @@
   .player-inactive .player-header {
     background: var(--darker);
   }
+
   /* ─── FOOTER TOTALS ─── */
   .totals-bar {
     background: linear-gradient(135deg, var(--blue-dark), #001a5e);
@@ -539,12 +540,6 @@
     gap: 8px;
   }
 
-  .modal-subtitle {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-bottom: 16px;
-  }
-
   .stats-table {
     width: 100%;
     border-collapse: separate;
@@ -592,6 +587,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-top: 20px;
     padding-top: 16px;
     border-top: 1px solid rgba(255,255,255,0.1);
@@ -626,6 +623,49 @@
   .score-final-pts.home { color: var(--orange); }
   .score-final-pts.away { color: #64b5f6; }
   .score-final-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; color: var(--text-dim); }
+
+  /* ─── QUARTER BOXES (IN FOOTER) ─── */
+  .q-boxes-wrapper {
+    display: flex;
+    flex: 1;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+    min-width: 140px;
+  }
+
+  .q-box {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .q-box-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .q-box-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 3px;
+  }
+
+  .q-box-h { color: var(--orange); }
+  .q-box-a { color: #64b5f6; }
+  .q-box-sep { color: var(--text-dim); font-size: 11px; font-weight: 400; }
 
   .btn-close-modal {
     background: rgba(255,255,255,0.08);
@@ -733,36 +773,26 @@
 <div class="modal-overlay" id="statsModal" onclick="closeIfOverlay(event)">
   <div class="modal">
     <div class="modal-title">📊 RIEPILOGO PARTITA</div>
-    <div style="display:flex; gap:12px; align-items:flex-start;">
-      <div style="flex:1; min-width:0; overflow-x:auto;">
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th>Giocatore</th>
-              <th>1PT</th>
-              <th>2PT</th>
-              <th>3PT</th>
-              <th>TOT</th>
-              <th>F</th>
-            </tr>
-          </thead>
-          <tbody id="statsBody"></tbody>
-        </table>
-      </div>
-      <div id="quarterScoresPanel" style="flex-shrink:0; width:110px; display:none;">
-        <table class="stats-table" style="width:100%;">
-          <thead>
-            <tr>
-              <th style="text-align:center; white-space:nowrap;">Q</th>
-              <th style="text-align:center; color:var(--orange-light);" id="qPanelHomeLbl">CASA</th>
-              <th style="text-align:center; color:#64b5f6;" id="qPanelAwayLbl">AVV</th>
-            </tr>
-          </thead>
-          <tbody id="quarterScoresBody"></tbody>
-        </table>
-      </div>
+    
+    <!-- Tabella Giocatori a tutta larghezza -->
+    <div style="width:100%; overflow-x:auto;">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Giocatore</th>
+            <th>1PT</th>
+            <th>2PT</th>
+            <th>3PT</th>
+            <th>TOT</th>
+            <th>F</th>
+          </tr>
+        </thead>
+        <tbody id="statsBody"></tbody>
+      </table>
     </div>
+    
     <div class="stats-footer">
+      <!-- Totale Partita -->
       <div class="score-final">
         <div class="score-final-team">
           <div class="score-final-name" id="statHomeName">CASA</div>
@@ -774,8 +804,14 @@
           <div class="score-final-pts away" id="statAwayScore">0</div>
         </div>
       </div>
+      
+      <!-- Contenitore per i box dei quarti (in mezzo) -->
+      <div id="qBoxesContainer" class="q-boxes-wrapper"></div>
+      
+      <!-- Tasto chiudi -->
       <button class="btn-close-modal" onclick="document.getElementById('statsModal').classList.remove('open')">Chiudi</button>
     </div>
+    
     <button class="btn-reset" onclick="confirmReset()">🔄 Azzera Partita</button>
   </div>
 </div>
@@ -1012,31 +1048,24 @@ function openStats() {
   document.getElementById('statHomeScore').textContent = totalP;
   document.getElementById('statAwayScore').textContent = awayScore;
 
-  // Quarter scores panel
-  const panel = document.getElementById('quarterScoresPanel');
-  const qBody = document.getElementById('quarterScoresBody');
-  qBody.innerHTML = '';
+  // Renderizza i box parziali dei quarti nel footer
+  const qContainer = document.getElementById('qBoxesContainer');
+  qContainer.innerHTML = '';
+  
   if (quarterHistory.length > 0) {
-    panel.style.display = '';
-    document.getElementById('qPanelHomeLbl').textContent = (document.getElementById('homeName').value || 'CASA').substring(0,4);
-    document.getElementById('qPanelAwayLbl').textContent = (document.getElementById('awayName').value || 'AVV').substring(0,4);
     quarterHistory.forEach(entry => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td style="text-align:center;font-weight:700;color:var(--text-dim)">Q${entry.q}</td>
-        <td style="text-align:center;color:var(--orange)">${entry.home}</td>
-        <td style="text-align:center;color:#64b5f6">${entry.away}</td>`;
-      qBody.appendChild(tr);
+      const box = document.createElement('div');
+      box.className = 'q-box';
+      box.innerHTML = `
+        <div class="q-box-label">Q${entry.q}</div>
+        <div class="q-box-row">
+          <span class="q-box-h">${entry.home}</span>
+          <span class="q-box-sep">-</span>
+          <span class="q-box-a">${entry.away}</span>
+        </div>
+      `;
+      qContainer.appendChild(box);
     });
-    // Totals row
-    const totH = quarterHistory.reduce((s,e)=>s+e.home,0);
-    const totA = quarterHistory.reduce((s,e)=>s+e.away,0);
-    const trTot = document.createElement('tr');
-    trTot.innerHTML = `<td style="text-align:center;font-weight:900;color:var(--orange);font-size:11px;letter-spacing:1px">TOT</td>
-      <td style="text-align:center;color:var(--orange);font-weight:900;font-size:17px">${totH}</td>
-      <td style="text-align:center;color:#64b5f6;font-weight:900;font-size:17px">${totA}</td>`;
-    qBody.appendChild(trTot);
-  } else {
-    panel.style.display = 'none';
   }
 
   document.getElementById('statsModal').classList.add('open');

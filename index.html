@@ -405,6 +405,40 @@
     background: rgba(255,255,255,0.05);
     color: var(--text-dim);
   }
+
+  /* ─── PRESENCE TOGGLE ─── */
+  .btn-presence {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    transition: transform .12s, opacity .15s;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .btn-presence:active { transform: scale(.92); }
+  .btn-presence.present {
+    background: rgba(76,175,80,0.2);
+    color: var(--green);
+    border: 1px solid rgba(76,175,80,0.4);
+  }
+  .btn-presence.absent {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ─── INACTIVE CARD ─── */
+  .player-inactive {
+    opacity: 0.45;
+  }
+  .player-inactive .player-header {
+    background: var(--darker);
+  }
   /* ─── FOOTER TOTALS ─── */
   .totals-bar {
     background: linear-gradient(135deg, var(--blue-dark), #001a5e);
@@ -712,21 +746,23 @@ let awayScore = 0;
 let quarter = 1;
 
 const DEFAULT_PLAYERS = [
-  { name: '04 - MATTYAS',  pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '15 - LEONARDO', pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '40 - SAMUELE',  pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '46 - FEDERICO', pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '56 - VALERIO',  pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '64 - MANUEL',   pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '72 - MATTEO',   pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '73 - SIMONE',   pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '77 - DANIELE',  pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: '95 - FRANCESCO',pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: 'Giocatore 11',  pt1:0, pt2:0, pt3:0, fouls:0 },
-  { name: 'Giocatore 12',  pt1:0, pt2:0, pt3:0, fouls:0 },
+  { name: '04 - MATTYAS',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '15 - LEONARDO', pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '40 - SAMUELE',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '46 - FEDERICO', pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '56 - VALERIO',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '64 - MANUEL',   pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '72 - MATTEO',   pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '73 - SIMONE',   pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '77 - DANIELE',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: '95 - FRANCESCO',pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: 'Giocatore 11',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
+  { name: 'Giocatore 12',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
 ];
 
 let players = JSON.parse(localStorage.getItem('bball_players') || 'null') || DEFAULT_PLAYERS.map(p => ({...p}));
+// Retrocompatibilità: se manca il campo active, lo impostiamo a true
+players = players.map(p => ({ active: true, ...p }));
 
 awayScore = parseInt(localStorage.getItem('bball_away') || '0');
 quarter = parseInt(localStorage.getItem('bball_quarter') || '1');
@@ -743,19 +779,27 @@ function render() {
   const list = document.getElementById('playerList');
   list.innerHTML = '';
 
-  players.forEach((p, i) => {
+  // Sort: active players first, inactive last
+  const sorted = players.map((p, i) => ({ p, i }))
+    .sort((a, b) => (b.p.active ? 1 : 0) - (a.p.active ? 1 : 0));
+
+  sorted.forEach(({ p, i }) => {
     const tot = totalPts(p);
     const foulDanger = p.fouls >= 5;
     const card = document.createElement('div');
-    card.className = 'player-card';
+    card.className = 'player-card' + (p.active ? '' : ' player-inactive');
     card.innerHTML = `
       <div class="player-header">
         <span class="player-num">${i+1}</span>
         <input class="player-name-input" value="${p.name}" 
           onchange="players[${i}].name=this.value; save();" 
           oninput="players[${i}].name=this.value; save();">
+        <button class="btn-presence ${p.active ? 'present' : 'absent'}" onclick="toggleActive(${i})" title="${p.active ? 'Presente' : 'Assente'}">
+          ${p.active ? '✓ Presente' : '✗ Assente'}
+        </button>
         <div class="player-total-badge" id="badge-${i}">${tot}</div>
       </div>
+      ${p.active ? `
       <div class="player-controls">
         <div class="pts-row">
           <div class="pt-group">
@@ -790,11 +834,18 @@ function render() {
           <button class="btn-foul" onclick="addFoul(${i},1)">+</button>
         </div>
       </div>
+      ` : ''}
     `;
     list.appendChild(card);
   });
 
   updateTotals();
+}
+
+function toggleActive(idx) {
+  players[idx].active = !players[idx].active;
+  save();
+  render();
 }
 
 function addPt(idx, type, delta) {
@@ -835,7 +886,7 @@ function addAway(delta) {
 
 function updateTotals() {
   let pts = 0, fouls = 0;
-  players.forEach(p => { pts += totalPts(p); fouls += p.fouls; });
+  players.forEach(p => { if (p.active) { pts += totalPts(p); fouls += p.fouls; } });
   document.getElementById('homeScore').textContent = pts;
   document.getElementById('totalPts').textContent = pts;
   document.getElementById('totalFouls').textContent = fouls;
@@ -859,6 +910,7 @@ function openStats() {
   let totalP = 0, totalF = 0;
 
   players.forEach(p => {
+    if (!p.active) return;
     const tot = totalPts(p);
     if (tot === 0 && p.fouls === 0 && p.name.startsWith('Giocatore')) return;
     totalP += tot; totalF += p.fouls;

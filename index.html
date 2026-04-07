@@ -478,7 +478,7 @@
     font-size: 28px;
   }
 
-  /* ─── STATS MODAL ─── */
+  /* ─── FAB ─── */
   .fab {
     position: fixed;
     bottom: 20px;
@@ -500,6 +500,7 @@
   }
   .fab:active { transform: scale(.92); }
 
+  /* ─── MODAL OVERLAY (QUARTER) ─── */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -527,6 +528,28 @@
     to { transform: translateY(0); }
   }
 
+  /* ─── STATS FULLSCREEN PAGE (For Long Screenshots) ─── */
+  .stats-view-container {
+    display: none;
+    padding: 16px 10px 40px;
+    max-width: 700px;
+    margin: 0 auto;
+    animation: fadeIn .3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stats-card {
+    background: var(--dark);
+    border-radius: var(--radius);
+    padding: 20px 16px 32px;
+    border-top: 3px solid var(--orange);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
   .modal-title {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 20px;
@@ -534,7 +557,7 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--white);
-    margin-bottom: 4px;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -700,81 +723,86 @@
 </head>
 <body>
 
-<header>
-  <div class="header-top">
-    <div class="app-title">🏀 SCORE<span>SHEET</span></div>
-    <div class="quarter-controls">
-      <span class="quarter-label">QUARTO</span>
-      <div class="quarter-badge" id="quarterBadge" onclick="nextQuarter()">1</div>
+<!-- WRAPPER PER L'INTERFACCIA PRINCIPALE -->
+<div id="appView">
+  <header>
+    <div class="header-top">
+      <div class="app-title">🏀 SCORE<span>SHEET</span></div>
+      <div class="quarter-controls">
+        <span class="quarter-label">QUARTO</span>
+        <div class="quarter-badge" id="quarterBadge" onclick="nextQuarter()">1</div>
+      </div>
     </div>
-  </div>
 
-  <div class="scoreboard">
-    <div class="score-team home">
-      <input class="team-name-input" id="homeName" value="PONTE DI NONA" maxlength="16">
-      <div class="score-value" id="homeScore">0</div>
+    <div class="scoreboard">
+      <div class="score-team home">
+        <input class="team-name-input" id="homeName" value="PONTE DI NONA" maxlength="16">
+        <div class="score-value" id="homeScore">0</div>
+      </div>
+      <div class="score-sep">—</div>
+      <div class="score-team away">
+        <input class="team-name-input" id="awayName" value="AVVERSARIO" maxlength="16" oninput="syncAwayName()">
+        <div class="score-value" id="awayScore">0</div>
+        <div class="away-input-row">
+          <button class="away-btn" onclick="addAway(1)">+1</button>
+          <button class="away-btn" onclick="addAway(2)">+2</button>
+          <button class="away-btn" onclick="addAway(3)">+3</button>
+          <button class="away-btn" style="background:rgba(255,255,255,0.1);color:#8fa5bb" onclick="addAway(-1)">−</button>
+        </div>
+      </div>
     </div>
-    <div class="score-sep">—</div>
-    <div class="score-team away">
-      <input class="team-name-input" id="awayName" value="AVVERSARIO" maxlength="16" oninput="syncAwayName()">
-      <div class="score-value" id="awayScore">0</div>
-      <div class="away-input-row">
-        <button class="away-btn" onclick="addAway(1)">+1</button>
-        <button class="away-btn" onclick="addAway(2)">+2</button>
-        <button class="away-btn" onclick="addAway(3)">+3</button>
-        <button class="away-btn" style="background:rgba(255,255,255,0.1);color:#8fa5bb" onclick="addAway(-1)">−</button>
+  </header>
+
+  <div class="main" id="playerList"></div>
+
+  <div class="main" style="padding-top: 0;">
+    <div class="totals-bar" style="margin-top: 0;">
+      <div>
+        <div class="totals-label">Totale Punti</div>
+        <div class="totals-value" id="totalPts">0</div>
+      </div>
+      <div class="totals-fouls">
+        <div class="totals-label">Falli Totali</div>
+        <div class="totals-value" id="totalFouls">0</div>
       </div>
     </div>
   </div>
-</header>
 
-<div class="main" id="playerList"></div>
+  <!-- FAB per statistiche -->
+  <button class="fab" onclick="openStats()" title="Statistiche">📊</button>
 
-<div class="totals-bar">
-  <div>
-    <div class="totals-label">Totale Punti</div>
-    <div class="totals-value" id="totalPts">0</div>
-  </div>
-  <div class="totals-fouls">
-    <div class="totals-label">Falli Totali</div>
-    <div class="totals-value" id="totalFouls">0</div>
+  <!-- QUARTER CONFIRM MODAL -->
+  <div class="modal-overlay" id="quarterModal">
+    <div class="modal" style="border-top-color: var(--blue-mid); max-height: unset; padding: 24px 20px 28px;">
+      <div class="modal-title" style="color:var(--orange); margin-bottom:10px;">&#9201; Fine Quarto <span id="qModalNum">1</span></div>
+      <div style="font-size:14px; color:var(--text-dim); margin-bottom:18px; line-height:1.5;">
+        Vuoi storicizzare il punteggio di questo quarto prima di passare al prossimo?
+      </div>
+      <div style="display:flex; gap:12px; justify-content:center; margin-bottom:8px;">
+        <div style="text-align:center;">
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--orange-light); text-transform:uppercase; margin-bottom:4px;" id="qModalHomeLbl">CASA</div>
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:var(--orange); line-height:1;" id="qModalHomeScore">0</div>
+        </div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:300; color:var(--text-dim); display:flex; align-items:center;">&#8212;</div>
+        <div style="text-align:center;">
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:#64b5f6; text-transform:uppercase; margin-bottom:4px;" id="qModalAwayLbl">AVV</div>
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:#64b5f6; line-height:1;" id="qModalAwayScore">0</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:18px;">
+        <button onclick="confirmQuarter(true)" style="flex:1; background:var(--orange); color:white; border:none; border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">&#10003; S&igrave;, storicizza</button>
+        <button onclick="confirmQuarter(false)" style="flex:1; background:rgba(255,255,255,0.07); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; cursor:pointer; text-transform:uppercase;">&#10007; Salta</button>
+      </div>
+    </div>
   </div>
 </div>
+<!-- FINE WRAPPER -->
 
-<!-- FAB per statistiche -->
-<button class="fab" onclick="openStats()" title="Statistiche">📊</button>
-
-<!-- QUARTER CONFIRM MODAL -->
-<div class="modal-overlay" id="quarterModal">
-  <div class="modal" style="border-top-color: var(--blue-mid); max-height: unset; padding: 24px 20px 28px;">
-    <div class="modal-title" style="color:var(--orange); margin-bottom:10px;">&#9201; Fine Quarto <span id="qModalNum">1</span></div>
-    <div style="font-size:14px; color:var(--text-dim); margin-bottom:18px; line-height:1.5;">
-      Vuoi storicizzare il punteggio di questo quarto prima di passare al prossimo?
-    </div>
-    <div style="display:flex; gap:12px; justify-content:center; margin-bottom:8px;">
-      <div style="text-align:center;">
-        <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--orange-light); text-transform:uppercase; margin-bottom:4px;" id="qModalHomeLbl">CASA</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:var(--orange); line-height:1;" id="qModalHomeScore">0</div>
-      </div>
-      <div style="font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:300; color:var(--text-dim); display:flex; align-items:center;">&#8212;</div>
-      <div style="text-align:center;">
-        <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:#64b5f6; text-transform:uppercase; margin-bottom:4px;" id="qModalAwayLbl">AVV</div>
-        <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:#64b5f6; line-height:1;" id="qModalAwayScore">0</div>
-      </div>
-    </div>
-    <div style="display:flex; gap:10px; margin-top:18px;">
-      <button onclick="confirmQuarter(true)" style="flex:1; background:var(--orange); color:white; border:none; border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">&#10003; S&igrave;, storicizza</button>
-      <button onclick="confirmQuarter(false)" style="flex:1; background:rgba(255,255,255,0.07); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; cursor:pointer; text-transform:uppercase;">&#10007; Salta</button>
-    </div>
-  </div>
-</div>
-
-<!-- STATS MODAL -->
-<div class="modal-overlay" id="statsModal" onclick="closeIfOverlay(event)">
-  <div class="modal">
+<!-- SCHERMATA STATISTICHE (Full Page per Screenshot) -->
+<div id="statsView" class="stats-view-container">
+  <div class="stats-card">
     <div class="modal-title">📊 RIEPILOGO PARTITA</div>
     
-    <!-- Tabella Giocatori a tutta larghezza -->
     <div style="width:100%; overflow-x:auto;">
       <table class="stats-table">
         <thead>
@@ -805,11 +833,11 @@
         </div>
       </div>
       
-      <!-- Contenitore per i box dei quarti (in mezzo) -->
+      <!-- Contenitore per i box dei quarti -->
       <div id="qBoxesContainer" class="q-boxes-wrapper"></div>
       
       <!-- Tasto chiudi -->
-      <button class="btn-close-modal" onclick="document.getElementById('statsModal').classList.remove('open')">Chiudi</button>
+      <button class="btn-close-modal" onclick="closeStats()">Chiudi</button>
     </div>
     
     <button class="btn-reset" onclick="confirmReset()">🔄 Azzera Partita</button>
@@ -820,7 +848,7 @@
 const PLAYER_COUNT = 12;
 let awayScore = 0;
 let quarter = 1;
-// quarterHistory: array of {q, home, away} — score at END of each storicised quarter
+// quarterHistory: array of {q, home, away}
 let quarterHistory = [];
 // snapshot of scores at start of current quarter
 let quarterStartHome = 0;
@@ -842,7 +870,6 @@ const DEFAULT_PLAYERS = [
 ];
 
 let players = JSON.parse(localStorage.getItem('bball_players') || 'null') || DEFAULT_PLAYERS.map(p => ({...p}));
-// Retrocompatibilità: se manca il campo active, lo impostiamo a true
 players = players.map(p => ({ active: true, ...p }));
 
 awayScore = parseInt(localStorage.getItem('bball_away') || '0');
@@ -866,7 +893,6 @@ function render() {
   const list = document.getElementById('playerList');
   list.innerHTML = '';
 
-  // Sort: active players first, inactive last
   const sorted = players.map((p, i) => ({ p, i }))
     .sort((a, b) => (b.p.active ? 1 : 0) - (a.p.active ? 1 : 0));
 
@@ -941,7 +967,6 @@ function addPt(idx, type, delta) {
   if (type === 3) players[idx].pt3 = Math.max(0, players[idx].pt3 + delta);
   save();
 
-  // Update only this player's DOM
   document.getElementById(`c1-${idx}`).textContent = players[idx].pt1;
   document.getElementById(`c2-${idx}`).textContent = players[idx].pt2;
   document.getElementById(`c3-${idx}`).textContent = players[idx].pt3;
@@ -981,7 +1006,6 @@ function updateTotals() {
 }
 
 function nextQuarter() {
-  // Show confirmation modal
   const homeNow = parseInt(document.getElementById('homeScore').textContent) || 0;
   document.getElementById('qModalNum').textContent = quarter;
   document.getElementById('qModalHomeLbl').textContent = document.getElementById('homeName').value || 'CASA';
@@ -1011,6 +1035,7 @@ function syncAwayName() {
   localStorage.setItem('bball_awayname', name);
 }
 
+// NUOVE FUNZIONI DI VISUALIZZAZIONE STATISTICHE
 function openStats() {
   const body = document.getElementById('statsBody');
   body.innerHTML = '';
@@ -1033,7 +1058,7 @@ function openStats() {
     body.appendChild(tr);
   });
 
-  // Total row
+  // Riga totali
   const tot_row = document.createElement('tr');
   tot_row.innerHTML = `
     <td style="font-weight:900;color:var(--orange)">TOTALE</td>
@@ -1048,7 +1073,7 @@ function openStats() {
   document.getElementById('statHomeScore').textContent = totalP;
   document.getElementById('statAwayScore').textContent = awayScore;
 
-  // Renderizza i box parziali dei quarti nel footer
+  // Renderizza i box parziali
   const qContainer = document.getElementById('qBoxesContainer');
   qContainer.innerHTML = '';
   
@@ -1068,12 +1093,15 @@ function openStats() {
     });
   }
 
-  document.getElementById('statsModal').classList.add('open');
+  // Nascondi app, mostra stats e scorri in cima
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('statsView').style.display = 'block';
+  window.scrollTo(0, 0);
 }
 
-function closeIfOverlay(e) {
-  if (e.target === document.getElementById('statsModal'))
-    document.getElementById('statsModal').classList.remove('open');
+function closeStats() {
+  document.getElementById('statsView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
 }
 
 function confirmReset() {
@@ -1083,7 +1111,7 @@ function confirmReset() {
     quarterHistory = []; quarterStartHome = 0; quarterStartAway = 0;
     localStorage.clear();
     document.getElementById('quarterBadge').textContent = 1;
-    document.getElementById('statsModal').classList.remove('open');
+    closeStats(); // Ritorna alla home dopo il reset
     render();
   }
 }

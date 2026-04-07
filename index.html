@@ -704,24 +704,64 @@
 <!-- FAB per statistiche -->
 <button class="fab" onclick="openStats()" title="Statistiche">📊</button>
 
+<!-- QUARTER CONFIRM MODAL -->
+<div class="modal-overlay" id="quarterModal">
+  <div class="modal" style="border-top-color: var(--blue-mid); max-height: unset; padding: 24px 20px 28px;">
+    <div class="modal-title" style="color:var(--orange); margin-bottom:10px;">&#9201; Fine Quarto <span id="qModalNum">1</span></div>
+    <div style="font-size:14px; color:var(--text-dim); margin-bottom:18px; line-height:1.5;">
+      Vuoi storicizzare il punteggio di questo quarto prima di passare al prossimo?
+    </div>
+    <div style="display:flex; gap:12px; justify-content:center; margin-bottom:8px;">
+      <div style="text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--orange-light); text-transform:uppercase; margin-bottom:4px;" id="qModalHomeLbl">CASA</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:var(--orange); line-height:1;" id="qModalHomeScore">0</div>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:300; color:var(--text-dim); display:flex; align-items:center;">&#8212;</div>
+      <div style="text-align:center;">
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; color:#64b5f6; text-transform:uppercase; margin-bottom:4px;" id="qModalAwayLbl">AVV</div>
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:900; color:#64b5f6; line-height:1;" id="qModalAwayScore">0</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:18px;">
+      <button onclick="confirmQuarter(true)" style="flex:1; background:var(--orange); color:white; border:none; border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">&#10003; S&igrave;, storicizza</button>
+      <button onclick="confirmQuarter(false)" style="flex:1; background:rgba(255,255,255,0.07); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px; font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; cursor:pointer; text-transform:uppercase;">&#10007; Salta</button>
+    </div>
+  </div>
+</div>
+
 <!-- STATS MODAL -->
 <div class="modal-overlay" id="statsModal" onclick="closeIfOverlay(event)">
   <div class="modal">
     <div class="modal-title">📊 RIEPILOGO PARTITA</div>
-    <div class="modal-subtitle" style="visibility:hidden;height:0"></div>
-    <table class="stats-table">
-      <thead>
-        <tr>
-          <th>Giocatore</th>
-          <th>1PT</th>
-          <th>2PT</th>
-          <th>3PT</th>
-          <th>TOT</th>
-          <th>F</th>
-        </tr>
-      </thead>
-      <tbody id="statsBody"></tbody>
-    </table>
+    <div style="display:flex; gap:12px; align-items:flex-start;">
+      <div style="flex:1; min-width:0; overflow-x:auto;">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Giocatore</th>
+              <th>1PT</th>
+              <th>2PT</th>
+              <th>3PT</th>
+              <th>TOT</th>
+              <th>F</th>
+            </tr>
+          </thead>
+          <tbody id="statsBody"></tbody>
+        </table>
+      </div>
+      <div id="quarterScoresPanel" style="flex-shrink:0; width:110px; display:none;">
+        <table class="stats-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th style="text-align:center; white-space:nowrap;">Q</th>
+              <th style="text-align:center; color:var(--orange-light);" id="qPanelHomeLbl">CASA</th>
+              <th style="text-align:center; color:#64b5f6;" id="qPanelAwayLbl">AVV</th>
+            </tr>
+          </thead>
+          <tbody id="quarterScoresBody"></tbody>
+        </table>
+      </div>
+    </div>
     <div class="stats-footer">
       <div class="score-final">
         <div class="score-final-team">
@@ -744,6 +784,11 @@
 const PLAYER_COUNT = 12;
 let awayScore = 0;
 let quarter = 1;
+// quarterHistory: array of {q, home, away} — score at END of each storicised quarter
+let quarterHistory = [];
+// snapshot of scores at start of current quarter
+let quarterStartHome = 0;
+let quarterStartAway = 0;
 
 const DEFAULT_PLAYERS = [
   { name: '04 - MATTYAS',  pt1:0, pt2:0, pt3:0, fouls:0, active:true },
@@ -766,11 +811,17 @@ players = players.map(p => ({ active: true, ...p }));
 
 awayScore = parseInt(localStorage.getItem('bball_away') || '0');
 quarter = parseInt(localStorage.getItem('bball_quarter') || '1');
+quarterHistory = JSON.parse(localStorage.getItem('bball_qhistory') || '[]');
+quarterStartHome = parseInt(localStorage.getItem('bball_qstart_home') || '0');
+quarterStartAway = parseInt(localStorage.getItem('bball_qstart_away') || '0');
 
 function save() {
   localStorage.setItem('bball_players', JSON.stringify(players));
   localStorage.setItem('bball_away', awayScore);
   localStorage.setItem('bball_quarter', quarter);
+  localStorage.setItem('bball_qhistory', JSON.stringify(quarterHistory));
+  localStorage.setItem('bball_qstart_home', quarterStartHome);
+  localStorage.setItem('bball_qstart_away', quarterStartAway);
 }
 
 function totalPts(p) { return p.pt1 + p.pt2*2 + p.pt3*3; }
@@ -894,6 +945,26 @@ function updateTotals() {
 }
 
 function nextQuarter() {
+  // Show confirmation modal
+  const homeNow = parseInt(document.getElementById('homeScore').textContent) || 0;
+  document.getElementById('qModalNum').textContent = quarter;
+  document.getElementById('qModalHomeLbl').textContent = document.getElementById('homeName').value || 'CASA';
+  document.getElementById('qModalAwayLbl').textContent = document.getElementById('awayName').value || 'AVV';
+  document.getElementById('qModalHomeScore').textContent = homeNow;
+  document.getElementById('qModalAwayScore').textContent = awayScore;
+  document.getElementById('quarterModal').classList.add('open');
+}
+
+function confirmQuarter(storicise) {
+  document.getElementById('quarterModal').classList.remove('open');
+  if (storicise) {
+    const homeTotal = parseInt(document.getElementById('homeScore').textContent) || 0;
+    const homeQ = homeTotal - quarterStartHome;
+    const awayQ = awayScore - quarterStartAway;
+    quarterHistory.push({ q: quarter, home: homeQ, away: awayQ });
+    quarterStartHome = homeTotal;
+    quarterStartAway = awayScore;
+  }
   quarter = quarter >= 4 ? 1 : quarter + 1;
   save();
   document.getElementById('quarterBadge').textContent = quarter;
@@ -941,6 +1012,33 @@ function openStats() {
   document.getElementById('statHomeScore').textContent = totalP;
   document.getElementById('statAwayScore').textContent = awayScore;
 
+  // Quarter scores panel
+  const panel = document.getElementById('quarterScoresPanel');
+  const qBody = document.getElementById('quarterScoresBody');
+  qBody.innerHTML = '';
+  if (quarterHistory.length > 0) {
+    panel.style.display = '';
+    document.getElementById('qPanelHomeLbl').textContent = (document.getElementById('homeName').value || 'CASA').substring(0,4);
+    document.getElementById('qPanelAwayLbl').textContent = (document.getElementById('awayName').value || 'AVV').substring(0,4);
+    quarterHistory.forEach(entry => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style="text-align:center;font-weight:700;color:var(--text-dim)">Q${entry.q}</td>
+        <td style="text-align:center;color:var(--orange)">${entry.home}</td>
+        <td style="text-align:center;color:#64b5f6">${entry.away}</td>`;
+      qBody.appendChild(tr);
+    });
+    // Totals row
+    const totH = quarterHistory.reduce((s,e)=>s+e.home,0);
+    const totA = quarterHistory.reduce((s,e)=>s+e.away,0);
+    const trTot = document.createElement('tr');
+    trTot.innerHTML = `<td style="text-align:center;font-weight:900;color:var(--orange);font-size:11px;letter-spacing:1px">TOT</td>
+      <td style="text-align:center;color:var(--orange);font-weight:900;font-size:17px">${totH}</td>
+      <td style="text-align:center;color:#64b5f6;font-weight:900;font-size:17px">${totA}</td>`;
+    qBody.appendChild(trTot);
+  } else {
+    panel.style.display = 'none';
+  }
+
   document.getElementById('statsModal').classList.add('open');
 }
 
@@ -953,6 +1051,7 @@ function confirmReset() {
   if (confirm('Azzerare tutti i dati della partita?')) {
     players = DEFAULT_PLAYERS.map(p => ({...p}));
     awayScore = 0; quarter = 1;
+    quarterHistory = []; quarterStartHome = 0; quarterStartAway = 0;
     localStorage.clear();
     document.getElementById('quarterBadge').textContent = 1;
     document.getElementById('statsModal').classList.remove('open');

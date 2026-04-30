@@ -23,6 +23,7 @@
     --green: #4caf50;
     --white: #ffffff;
     --radius: 10px;
+    --nav-height: 68px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -33,6 +34,8 @@
     font-family: 'Barlow', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    /* spazio per la barra in basso */
+    padding-bottom: var(--nav-height);
   }
 
   /* ─── HEADER ─── */
@@ -201,10 +204,23 @@
     margin-bottom: 8px;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.05);
-    transition: box-shadow .2s;
+    transition: box-shadow .2s, border-color .3s;
   }
 
   .player-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+
+  /* Flash highlight quando si naviga verso un giocatore */
+  .player-card.highlight {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 2px rgba(255,107,0,0.4), 0 4px 20px rgba(255,107,0,0.2);
+    animation: cardFlash .8s ease-out forwards;
+  }
+
+  @keyframes cardFlash {
+    0%   { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,0,0.6), 0 4px 24px rgba(255,107,0,0.35); }
+    60%  { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(255,107,0,0.3), 0 4px 16px rgba(255,107,0,0.15); }
+    100% { border-color: rgba(255,255,255,0.05); box-shadow: none; }
+  }
 
   .player-header {
     display: flex;
@@ -481,15 +497,15 @@
   /* ─── FAB ─── */
   .fab {
     position: fixed;
-    bottom: 20px;
+    bottom: calc(var(--nav-height) + 12px);
     right: 20px;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     background: var(--orange);
     border-radius: 50%;
     border: none;
     color: white;
-    font-size: 22px;
+    font-size: 20px;
     cursor: pointer;
     box-shadow: 0 4px 20px rgba(255,107,0,0.5);
     display: flex;
@@ -499,6 +515,97 @@
     z-index: 200;
   }
   .fab:active { transform: scale(.92); }
+
+  /* ─── BOTTOM NAV BAR ─── */
+  .player-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--nav-height);
+    background: linear-gradient(180deg, rgba(8,20,34,0.0) 0%, rgba(8,20,34,1) 18%);
+    z-index: 150;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 10px;
+  }
+
+  .player-nav-inner {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px 0;
+  }
+  .player-nav-inner::-webkit-scrollbar { display: none; }
+
+  .nav-chip {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface2);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    min-width: 46px;
+    height: 46px;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition: transform .12s, background .15s, border-color .15s;
+    position: relative;
+  }
+  .nav-chip:active { transform: scale(.88); }
+
+  .nav-chip.active-chip {
+    background: rgba(255,107,0,0.18);
+    border-color: var(--orange);
+  }
+
+  .nav-chip-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  /* Pallino fallo sopra il chip */
+  .nav-chip-foul {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--foul-red);
+    border: 2px solid var(--darker);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .nav-chip-foul.hidden { display: none; }
+
+  /* Puntino verde "presente" in basso al chip */
+  .nav-chip-pts {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .nav-chip-pts.has-pts { color: var(--orange-light); }
 
   /* ─── MODAL OVERLAY (QUARTER) ─── */
   .modal-overlay {
@@ -528,7 +635,7 @@
     to { transform: translateY(0); }
   }
 
-  /* ─── STATS FULLSCREEN PAGE (For Long Screenshots) ─── */
+  /* ─── STATS FULLSCREEN PAGE ─── */
   .stats-view-container {
     display: none;
     padding: 16px 10px 40px;
@@ -617,15 +724,9 @@
     border-top: 1px solid rgba(255,255,255,0.1);
   }
 
-  .score-final {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  .score-final { display: flex; align-items: center; gap: 12px; }
 
-  .score-final-team {
-    text-align: center;
-  }
+  .score-final-team { text-align: center; }
 
   .score-final-name {
     font-family: 'Barlow Condensed', sans-serif;
@@ -647,7 +748,6 @@
   .score-final-pts.away { color: #64b5f6; }
   .score-final-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; color: var(--text-dim); }
 
-  /* ─── QUARTER BOXES (IN FOOTER) ─── */
   .q-boxes-wrapper {
     display: flex;
     flex: 1;
@@ -723,7 +823,7 @@
 </head>
 <body>
 
-<!-- WRAPPER PER L'INTERFACCIA PRINCIPALE -->
+<!-- WRAPPER APP PRINCIPALE -->
 <div id="appView">
   <header>
     <div class="header-top">
@@ -768,8 +868,13 @@
     </div>
   </div>
 
-  <!-- FAB per statistiche -->
+  <!-- FAB statistiche -->
   <button class="fab" onclick="openStats()" title="Statistiche">📊</button>
+
+  <!-- BARRA NAVIGAZIONE GIOCATORI (fissa in basso) -->
+  <nav class="player-nav" id="playerNav">
+    <div class="player-nav-inner" id="playerNavInner"></div>
+  </nav>
 
   <!-- QUARTER CONFIRM MODAL -->
   <div class="modal-overlay" id="quarterModal">
@@ -796,9 +901,9 @@
     </div>
   </div>
 </div>
-<!-- FINE WRAPPER -->
+<!-- FINE WRAPPER APP -->
 
-<!-- SCHERMATA STATISTICHE (Full Page per Screenshot) -->
+<!-- SCHERMATA STATISTICHE -->
 <div id="statsView" class="stats-view-container">
   <div class="stats-card">
     <div class="modal-title">📊 RIEPILOGO PARTITA</div>
@@ -820,7 +925,6 @@
     </div>
     
     <div class="stats-footer">
-      <!-- Totale Partita -->
       <div class="score-final">
         <div class="score-final-team">
           <div class="score-final-name" id="statHomeName">CASA</div>
@@ -832,11 +936,7 @@
           <div class="score-final-pts away" id="statAwayScore">0</div>
         </div>
       </div>
-      
-      <!-- Contenitore per i box dei quarti -->
       <div id="qBoxesContainer" class="q-boxes-wrapper"></div>
-      
-      <!-- Tasto chiudi -->
       <button class="btn-close-modal" onclick="closeStats()">Chiudi</button>
     </div>
     
@@ -848,9 +948,7 @@
 const PLAYER_COUNT = 12;
 let awayScore = 0;
 let quarter = 1;
-// quarterHistory: array of {q, home, away}
 let quarterHistory = [];
-// snapshot of scores at start of current quarter
 let quarterStartHome = 0;
 let quarterStartAway = 0;
 
@@ -889,10 +987,72 @@ function save() {
 
 function totalPts(p) { return p.pt1 + p.pt2*2 + p.pt3*3; }
 
+/**
+ * Estrae il numero di maglia dal nome del giocatore.
+ * Formati supportati: "04 - NOME", "04-NOME", "4 NOME"
+ * Se non trova un numero restituisce "?"
+ */
+function extractJerseyNumber(name) {
+  const match = name.match(/^(\d+)\s*[-–]?\s*/);
+  if (match) {
+    // Rimuove gli zeri iniziali per la visualizzazione (04 → 4, ma 40 → 40)
+    const num = parseInt(match[1], 10);
+    return String(num);
+  }
+  return '?';
+}
+
+/* ─── RENDER BARRA NAVIGAZIONE ─── */
+function renderNav() {
+  const inner = document.getElementById('playerNavInner');
+  inner.innerHTML = '';
+
+  players.forEach((p, i) => {
+    if (!p.active) return; // Solo giocatori presenti
+
+    const jerseyNum = extractJerseyNumber(p.name);
+    const pts = totalPts(p);
+    const hasFouls = p.fouls > 0;
+
+    const chip = document.createElement('button');
+    chip.className = 'nav-chip';
+    chip.setAttribute('data-player-idx', i);
+    chip.setAttribute('aria-label', `Vai a ${p.name}`);
+    chip.innerHTML = `
+      ${hasFouls ? `<span class="nav-chip-foul">${p.fouls}</span>` : `<span class="nav-chip-foul hidden"></span>`}
+      <span class="nav-chip-num">${jerseyNum}</span>
+      <span class="nav-chip-pts ${pts > 0 ? 'has-pts' : ''}">${pts > 0 ? pts+'pt' : '·'}</span>
+    `;
+    chip.addEventListener('click', () => scrollToPlayer(i));
+    inner.appendChild(chip);
+  });
+}
+
+/* ─── SCROLL AL GIOCATORE + FLASH ─── */
+function scrollToPlayer(idx) {
+  const card = document.getElementById(`player-card-${idx}`);
+  if (!card) return;
+
+  // Calcola offset considerando header sticky
+  const headerH = document.querySelector('header').offsetHeight;
+  const cardTop = card.getBoundingClientRect().top + window.scrollY;
+  const targetY = cardTop - headerH - 10;
+
+  window.scrollTo({ top: targetY, behavior: 'smooth' });
+
+  // Flash highlight
+  card.classList.remove('highlight');
+  void card.offsetWidth; // reflow per riattivare animazione
+  card.classList.add('highlight');
+  setTimeout(() => card.classList.remove('highlight'), 900);
+}
+
+/* ─── RENDER PRINCIPALE ─── */
 function render() {
   const list = document.getElementById('playerList');
   list.innerHTML = '';
 
+  // I giocatori attivi vengono mostrati prima
   const sorted = players.map((p, i) => ({ p, i }))
     .sort((a, b) => (b.p.active ? 1 : 0) - (a.p.active ? 1 : 0));
 
@@ -901,12 +1061,13 @@ function render() {
     const foulDanger = p.fouls >= 5;
     const card = document.createElement('div');
     card.className = 'player-card' + (p.active ? '' : ' player-inactive');
+    card.id = `player-card-${i}`;
     card.innerHTML = `
       <div class="player-header">
         <span class="player-num">${i+1}</span>
         <input class="player-name-input" value="${p.name}" 
-          onchange="players[${i}].name=this.value; save();" 
-          oninput="players[${i}].name=this.value; save();">
+          onchange="players[${i}].name=this.value; save(); renderNav();" 
+          oninput="players[${i}].name=this.value; save(); renderNav();">
         <button class="btn-presence ${p.active ? 'present' : 'absent'}" onclick="toggleActive(${i})" title="${p.active ? 'Presente' : 'Assente'}">
           ${p.active ? '✓ Presente' : '✗ Assente'}
         </button>
@@ -953,6 +1114,7 @@ function render() {
   });
 
   updateTotals();
+  renderNav();
 }
 
 function toggleActive(idx) {
@@ -979,6 +1141,7 @@ function addPt(idx, type, delta) {
   badge.classList.add('pulse');
 
   updateTotals();
+  renderNav(); // aggiorna i punti sui chip
 }
 
 function addFoul(idx, delta) {
@@ -988,6 +1151,7 @@ function addFoul(idx, delta) {
   el.textContent = players[idx].fouls;
   el.className = 'foul-count' + (players[idx].fouls >= 5 ? ' danger' : '');
   updateTotals();
+  renderNav(); // aggiorna i pallini fallo sui chip
 }
 
 function addAway(delta) {
@@ -1035,7 +1199,6 @@ function syncAwayName() {
   localStorage.setItem('bball_awayname', name);
 }
 
-// NUOVE FUNZIONI DI VISUALIZZAZIONE STATISTICHE
 function openStats() {
   const body = document.getElementById('statsBody');
   body.innerHTML = '';
@@ -1058,7 +1221,6 @@ function openStats() {
     body.appendChild(tr);
   });
 
-  // Riga totali
   const tot_row = document.createElement('tr');
   tot_row.innerHTML = `
     <td style="font-weight:900;color:var(--orange)">TOTALE</td>
@@ -1073,10 +1235,8 @@ function openStats() {
   document.getElementById('statHomeScore').textContent = totalP;
   document.getElementById('statAwayScore').textContent = awayScore;
 
-  // Renderizza i box parziali
   const qContainer = document.getElementById('qBoxesContainer');
   qContainer.innerHTML = '';
-  
   if (quarterHistory.length > 0) {
     quarterHistory.forEach(entry => {
       const box = document.createElement('div');
@@ -1093,7 +1253,6 @@ function openStats() {
     });
   }
 
-  // Nascondi app, mostra stats e scorri in cima
   document.getElementById('appView').style.display = 'none';
   document.getElementById('statsView').style.display = 'block';
   window.scrollTo(0, 0);
@@ -1111,7 +1270,7 @@ function confirmReset() {
     quarterHistory = []; quarterStartHome = 0; quarterStartAway = 0;
     localStorage.clear();
     document.getElementById('quarterBadge').textContent = 1;
-    closeStats(); // Ritorna alla home dopo il reset
+    closeStats();
     render();
   }
 }
